@@ -4,6 +4,7 @@ let noteText;
 let saveNoteBtn;
 let newNoteBtn;
 let noteList;
+let clearBtn;
 
 if (window.location.pathname === '/notes') {
   noteForm = document.querySelector('.note-form');
@@ -43,6 +44,11 @@ const saveNote = (note) =>
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(note)
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
   });
 
 const deleteNote = (id) =>
@@ -51,6 +57,11 @@ const deleteNote = (id) =>
     headers: {
       'Content-Type': 'application/json'
     }
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
   });
 
 const renderActiveNote = () => {
@@ -77,39 +88,61 @@ const handleNoteSave = () => {
     title: noteTitle.value,
     text: noteText.value
   };
+  console.log('Saving new note:', newNote); // Debug log
   saveNote(newNote).then(() => {
+    console.log('Note saved, fetching updated notes'); // Debug log
     getAndRenderNotes();
     renderActiveNote();
+  }).catch(error => {
+    console.error('Error saving note:', error); // Debug log
   });
 };
 
 // Delete the clicked note
 const handleNoteDelete = (e) => {
-  // Prevents the click listener for the list from being called when the button inside of it is clicked
   e.stopPropagation();
 
   const note = e.target;
-  const noteId = JSON.parse(note.parentElement.getAttribute('data-note')).id;
+  const noteData = note.parentElement.getAttribute('data-note');
+  if (!noteData) {
+    console.error('No note data found'); // Debug log
+    return;
+  }
+  const noteId = JSON.parse(noteData).id;
+  if (!noteId) {
+    console.error('Note ID is undefined'); // Debug log
+    return;
+  }
+  console.log('Deleting note with id:', noteId); // Debug log
 
   if (activeNote.id === noteId) {
     activeNote = {};
   }
 
   deleteNote(noteId).then(() => {
+    console.log('Note deleted, fetching updated notes'); // Debug log
     getAndRenderNotes();
     renderActiveNote();
+  }).catch(error => {
+    console.error('Error deleting note:', error); // Debug log
   });
 };
 
 // Sets the activeNote and displays it
 const handleNoteView = (e) => {
   e.preventDefault();
-  activeNote = JSON.parse(e.target.parentElement.getAttribute('data-note'));
+  const noteData = e.target.parentElement.getAttribute('data-note');
+  if (!noteData) {
+    console.error('No note data found'); // Debug log
+    return;
+  }
+  activeNote = JSON.parse(noteData);
+  console.log('Viewing note:', activeNote); // Debug log
   renderActiveNote();
 };
 
-// Sets the activeNote to and empty object and allows the user to enter a new note
-const handleNewNoteView = (e) => {
+// Sets the activeNote to an empty object and allows the user to enter a new note
+const handleNewNoteView = () => {
   activeNote = {};
   show(clearBtn);
   renderActiveNote();
@@ -172,6 +205,7 @@ const renderNoteList = async (notes) => {
   jsonNotes.forEach((note) => {
     const li = createLi(note.title);
     li.dataset.note = JSON.stringify(note);
+    console.log('Setting note data:', li.dataset.note); // Debug log
 
     noteListItems.push(li);
   });
@@ -184,6 +218,7 @@ const renderNoteList = async (notes) => {
 // Gets notes from the db and renders them to the sidebar
 const getAndRenderNotes = () => getNotes().then(renderNoteList);
 
+// Event listeners setup
 if (window.location.pathname === '/notes') {
   saveNoteBtn.addEventListener('click', handleNoteSave);
   newNoteBtn.addEventListener('click', handleNewNoteView);
